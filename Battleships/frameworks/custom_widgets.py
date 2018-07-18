@@ -18,31 +18,86 @@ import copy
 
 
 ### Multi-function coordinate controller ###
-# – Changes from (A -> 1, B -> 2 etc) :D
-# – Also converts from (1 -> A) depending on input
-def convert_type(letter):
-    CHAR = list("ABCDEFGHIJ")
 
-    NUM = list("123456789") + ["10"]
 
-    if str(letter)[0].isalpha() and letter[-1].isdigit():
-        coord_x = convert_type(letter[0])
-        coord_y = "".join(letter[1:])
+class CoordUtils(object):
 
-        return (int(coord_x), int(coord_y))
+    # Coordinate given in (x, y) or alpha-num form, returned in (x, y) form
+    @classmethod
+    def get_surrounding_coords(cls, coord):
+        surrounding_coords = []
 
-    elif str(letter).isalpha():
-        return NUM[CHAR.index(letter.upper())]
+        sides = ['left', 'right', 'top', 'bottom']
 
-    else:
-        return CHAR[letter - 1]
+        for side in sides:
+            side_coord = CoordUtils.get_side_coord(coord, side)
+
+            if side_coord: surrounding_coords.append(side_coord)
+
+        return surrounding_coords
+
+    # Get the coordinate in each position, returned in (x, y) form
+    @classmethod
+    def get_side_coord(cls, coord, side):
+        if type(coord) is not tuple:
+            coord = CoordUtils.convert_type(coord)
+
+        x, y = coord[0], coord[1]
+
+        if side == 'left' and x != 1:
+            return (x - 1, y)
+
+        elif side == 'right' and x != 10:
+            return (x + 1, y)
+
+        elif side == 'top' and y != 1:
+            return (x, y - 1)
+
+        elif side == 'bottom' and y != 10:
+            return (x, y + 1)
+
+        # Conditions for else... either side is not defined, OR no coordinate
+        else:
+            return None
+
+
+
+    # Converts input coordinate into a different form.
+    # A -> 1    1 -> A      A1 -> (1, 1)    (1, 1) –> A1
+    @classmethod
+    def convert_type(cls, letter):
+        CHAR = list("ABCDEFGHIJ")
+
+        NUM = list("123456789") + ["10"]
+
+
+        # If coord in alpha-num form (i.e D1)
+        if str(letter)[0].isalpha() and letter[-1].isdigit():
+            coord_x = CoordUtils.convert_type(letter[0])
+            coord_y = "".join(letter[1:])
+
+            return (int(coord_x), int(coord_y))
+
+        # If coord in (x, y) form
+        elif type(letter) is tuple:
+            return (CoordUtils.convert_type(letter[0]) + str(letter[1]))
+
+        # If given single letter (i.e A)
+        elif str(letter).isalpha():
+            return NUM[CHAR.index(letter.upper())]
+
+        # If letter is number
+        else:
+            return CHAR[letter - 1]
 
 ### Creates a rounded rectangle, with corner dimensions format ###
+#
 # – canvas defines parent body
 # – x1, y1 (first corner), x2, y2 (second corner), r defines corner radius
 # – colour is for the shape's colour
 # – tag is for any special tags
 # – bottom_hidden=True makes no rounding on bottom border
+#
 def rounded_rect(canvas, x1, y1, x2, y2, r, colour, tag=None, bottom_hidden=False):
 
     # All the elements of
@@ -87,7 +142,10 @@ def rounded_rect(canvas, x1, y1, x2, y2, r, colour, tag=None, bottom_hidden=Fals
     return elements
 
 
-# Class of all the colours used with colour themes
+### Class of all the colours used with colour themes ###
+#
+# – default colour scheme can be accessed theme = Colour("default"), theme.GRAY... etc
+#
 class Colours(object):
     def __init__(self, theme):
 
@@ -128,6 +186,7 @@ class Colours(object):
                              self.YELLOW, self.GREEN]
 
 
+### A progress bar ###
 class ProgressBar(tk.Canvas):
     def __init__(self, parent, direction="up", colours=("#FF4F4F", "#A42F2F"),
                  bg_canvas="white", multiplier=2, gradient=False):
@@ -185,33 +244,46 @@ class ProgressBar(tk.Canvas):
         self.update_canvas()
 
 
+### A popup that disappears in time ###
 class Popup(tk.Canvas):
-    def __init__(self, parent, text, bg, fg, fill):
+    def __init__(self, parent, text, bg, fg, fill=False, subtext=None):
         theme = Colours("default")
         super().__init__(parent)
 
         self.place(x=parent.winfo_width()/2, y=parent.winfo_height()/2, anchor='center')
 
         self["width"] = parent.winfo_width()
-        self["height"] = 100
+
+        self["height"] = parent.winfo_height() if fill else 100
         self["bg"] = bg
-        self["highlightthickness"] = 0
 
-        self.create_text(int(self["width"])/2 + int(self["highlightthickness"]),
-                         int(self["height"])/2 + int(self["highlightthickness"]),
-                         text=text, fill=fg, font=("Tw Cen MT", 24), anchor='center')
+        main_font = ("Tw Cen MT", 28, "bold") if subtext else ("Tw Cen MT", 24)
+
+        self.create_text(int(self["width"]) / 2, int(self["height"]) / 2 - (12 if subtext else 0),
+                         text=text, fill=fg, font=main_font, anchor='center')
+
+        self.create_text(int(self["width"]) / 2, int(self["height"]) / 2 + 12,
+                         text=subtext if subtext else "", fill=fg, font=("Tw Cen MT", 16), anchor='center')
 
 
-        parent.after(2000, self.destroy)
+        parent.after(5000 if fill else 2000, self.destroy)
 
 
-### A ship ###
+### A ship to be placed on a canvas ###
 class Ship(object):
+    def get_name(ship_length):
+         return {2: 'Destroyer',
+                 3: 'Cruiser',
+                 4: 'Battleship',
+                 5: 'Carrier'}.get(ship_length, "Yellow Submarine")
+
     def __init__(self, parent_canvas, x1, y1, length=4, colour=Colours("default").WHITE, dir='h'):
 
         self.parent = parent_canvas
         self.theme = Colours("default")
         self.colour = colour
+
+        self.name = Ship.get_name(length)
 
         self.dir = dir
 
@@ -231,10 +303,10 @@ class Ship(object):
                                      y1 + y_dimension,
                                      55, colour=colour)
 
-        text = parent_canvas.create_text(x1 + int(x_dimension/2), y1 + int(y_dimension/2), anchor='center',
-                                         text=self.length, fill=self.theme.GRAY_BLACK, font=('Tw Cen MT', 12))
+        self.text = parent_canvas.create_text(x1 + int(x_dimension/2), y1 + int(y_dimension/2), anchor='center',
+                                              text=self.length, fill=self.colour, font=('Tw Cen MT', 12))
 
-        for canvas_obj in self.elements + [text]:
+        for canvas_obj in self.elements + [self.text]:
             self.parent.tag_bind(canvas_obj, "<Button-1>", lambda event: self.click(event))
             self.parent.tag_bind(canvas_obj, "<Enter>", lambda event: self.hover(event))
             self.parent.tag_bind(canvas_obj, "<Leave>", lambda event: self.unhover(event))
@@ -257,6 +329,8 @@ class Ship(object):
         if self.selected == True:
             return
 
+        self.parent.itemconfigure(self.text, fill=self.theme.GRAY_BLACK)
+
         for canvas_obj in self.elements:
             self.parent.itemconfigure(canvas_obj, fill=self.theme.GRAY_LIGHT)
             self.parent.itemconfigure(canvas_obj, outline=self.theme.GRAY_LIGHT)
@@ -265,15 +339,18 @@ class Ship(object):
         if self.selected == True:
             return
 
+        self.parent.itemconfigure(self.text, fill=self.colour)
+
         for canvas_obj in self.elements:
             self.parent.itemconfigure(canvas_obj, fill=self.colour)
             self.parent.itemconfigure(canvas_obj, outline=self.colour)
 
 
-### Battleship grids ###
+### Battleship grids for setup and game ###
 class CustomGrid(tk.Canvas):
     def __init__(self, parent, progress_bar=None, multiplier=3, disabled=False,
-                 colours="grey", bg_canvas="white", bottom_hidden=False, is_game_board=True):
+                 colours="grey", bg_canvas="white", bottom_hidden=False,
+                 is_game_board=True, game=None, owner=None):
         super().__init__(parent)
 
         # Multiplier for scaling grid
@@ -298,6 +375,9 @@ class CustomGrid(tk.Canvas):
         self.linked_progress_bar = progress_bar
         if self.linked_progress_bar: self.linked_progress_bar.set_percentage(0)
 
+        self.linked_percentage = None
+        if self.linked_percentage: self.linked_percentage["text"] = "0.00%"
+
         # Determines whether or not the board is used for setup or game
         self.is_game_board = is_game_board
 
@@ -307,23 +387,21 @@ class CustomGrid(tk.Canvas):
         # List of all squares (with coordinates) on grid, appended to in update_canvas()
         self.squares = []
 
-        # Ships are structured as [ship1 ... shipn] with each ship [coord1 ... coordn] (coords in line)
-        self.ships = []
-
-        # List of coordinates with a hit in alpha form (i.e "G4")
-        self.hit = []
-
-        # For gameplay and engine purposes
-        if self.is_game_board:
-            self.ships = [["G1", "G2", "G3", "G4", "G5"],
-                          ["A10", "B10", "C10", "D10"],
-                          ["C5", "D5", "E5"],
-                          ["I8", "I9", "I10"],
-                          ["A4", "B4"]]
-
-            self.remaining_ships = copy.deepcopy(self.ships)
-
         # For setting up the board
+        if is_game_board:
+            self.game = game
+            self.owner = owner
+
+            if self.owner == 'player':
+                self.ships = self.game.player_ships
+                self.remaining_ships = self.game.player_remaining_ships
+                self.hit_spaces = self.game.player_board_hit
+
+            else:
+                self.ships = self.game.computer_ships
+                self.remaining_ships = self.game.computer_remaining_ships
+                self.hit_spaces = self.game.computer_board_hit
+
         else:
             self.selection_length = 0
             self.selection_dir = 'h'
@@ -357,7 +435,7 @@ class CustomGrid(tk.Canvas):
                     # For every ship on the board, make that square have an "occupied" tag
                     # for identification for mouse click event.
                     for ship in self.ships:
-                        if (x + 1, y + 1) in [convert_type(alpha_coord) for alpha_coord in ship]:
+                        if (x + 1, y + 1) in [CoordUtils.convert_type(alpha_coord) for alpha_coord in ship]:
                             tag = ("square", "occupied")
 
                 rect = (self.create_rectangle(self.multiplier * 10 * x + spacing + shift,
@@ -373,7 +451,7 @@ class CustomGrid(tk.Canvas):
                 # Adds the letter coord on the first row
                 textrow = (self.create_text(self.multiplier * 10 * x + self.multiplier * 13,
                                            shift + (7 if self.multiplier == 2 else 12),
-                                           text=convert_type(x + 1), font=("Tw Cen Mt", self.multiplier * 3 + 1),
+                                           text=CoordUtils.convert_type(x + 1), font=("Tw Cen Mt", self.multiplier * 3 + 1),
                                            fill=self.theme.GRAY_DARK)) if (rect[1][1] == 1) else None
 
                 # Adds the integer coord on the first column
@@ -417,10 +495,7 @@ class CustomGrid(tk.Canvas):
 
     # Colour each coordinate, coordinate given in (x, y) – frontend
     def colour_square(self, coord, fill):
-        for rect in self.squares:
-            if rect[1] == coord:
-                self.itemconfigure(rect[0], fill=fill)
-                break
+        self.itemconfigure(self.coord_to_rect(coord)[0], fill=fill)
 
     ## FOLLOWING 4 DEFINITIONS ARE EVENT HANDLERS FOR SETUP ##
 
@@ -452,7 +527,7 @@ class CustomGrid(tk.Canvas):
 
             selection = []
             for x, y in selection_coords:
-                selection.append("{}{}".format(convert_type(x), y))
+                selection.append("{}{}".format(CoordUtils.convert_type(x), y))
 
             self.selection.append(selection)
 
@@ -507,17 +582,28 @@ class CustomGrid(tk.Canvas):
                 self.colour_square(rect[1], self.foreground)
 
     # Event handler when square is clicked
-    def hit(self, event, rect):
-        if self.disabled == False and self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT:
+    def hit(self, event, rect, override=False):
+        if self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT or override:
 
-            # If the square is occupied, make it red
-            if "occupied" in self.itemcget(rect[0], "tag").split(" "):
-                self.colour_square(rect[1], self.theme.RED)
+            game_control = self.game.game_control(CoordUtils.convert_type(rect[1]), self.owner)
 
-                for ship in self.remaining_ships:
-                    for coord in ship:
-                        if convert_type(coord) == rect[1]:
-                            ship.remove(coord)
+            # Nothing was hit
+            if len(game_control) == 1:
+                self.colour_square(rect[1], self.theme.BLUE)
+                self.disabled = True
+
+            # A ship square was hit
+            elif len(game_control) == 3:
+
+                name = Ship.get_name(len(game_control[2]))
+
+                # Ship was sunk
+                if game_control[1]:
+                    [self.colour_square(CoordUtils.convert_type(coord), self.theme.RED) for coord in game_control[2]]
+
+                # Ship wasn't sunk
+                else:
+                    self.colour_square(rect[1], self.theme.GOLD)
 
                 # Total number of ship squares
                 total_spaces = sum([len(ship) for ship in self.ships])
@@ -530,11 +616,15 @@ class CustomGrid(tk.Canvas):
                     new_percent = round((1 - remaining_spaces/total_spaces) * 100)
                     self.linked_progress_bar.set_percentage(new_percent)
 
-                self.check_win()
+                if self.linked_percentage:
+                    new_percent = (1 - remaining_spaces/total_spaces) * 100
 
-            # If it's an empty square
-            else:
-                self.colour_square(rect[1], self.theme.BLUE)
+                    roundings = ["{:.2f}%".format(round(new_percent)), "{:.1f}%".format(round(new_percent)), "100%"]
+
+                    self.linked_percentage["text"] = roundings[0] if new_percent < 10 else roundings[1]
+
+                    if round(new_percent) == 100:
+                        self.linked_percentage["text"] = roundings[2]
 
     # When a square is hovered – frontend
     def hover(self, event, rect):
@@ -546,33 +636,12 @@ class CustomGrid(tk.Canvas):
         if self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT:
             self.colour_square(rect[1], self.theme.GRAY_LIGHT)
 
-    # Check if all remaining occupied squares are hit – backend
-    def check_win(self):
-        for ship in self.remaining_ships:
-            if len(ship) > 0:
-                print("Continue playing!")
-                break
-        else:
-            print("It's a win!")
-
-    # Adds default setup ships to the grid, in [ship[coord]] form – backend
-    def add_ships(self, ship_array):
-        self.ships = ship_array
-        self.update_canvas()
-
     # Show all hidden ships on board
     def show_hidden_ships(self):
         self.update_canvas(show_hidden_ships=True)
 
-    # Exports a string with data on all squares (ship, hit, unhit etc.) – backend
-    def export_ship_status(self):
-        ships = self.ships
 
-        hit_spaces = self.
-
-
-
-### Button blueprint (different types incl.) ###
+### Blueprint for rounded buttons with built in event handlers ###
 class CustomButton(tk.Frame):
     def __init__(self, parent, text, fg=None, colour=None, active=None,
                        width=200, height=60, bg_canvas='white', font=("Tw Cen MT", 20), align="center"):
@@ -645,13 +714,3 @@ class CustomButton(tk.Frame):
     def click(self, event):
         if self.click_func:
             self.click_func()
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-
-    root.wm_title("Battleships – Version Alpha 1.00")
-
-    window = WindowObj(root)
-
-    root.mainloop()
