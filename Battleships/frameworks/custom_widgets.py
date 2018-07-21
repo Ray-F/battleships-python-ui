@@ -2,13 +2,17 @@
 #
 # Created 11th June 2018, Raymond Feng
 #
-# Current Version: 1.00
-# Updated: 14th June 2018
+# Current Version: 4.15
+# Updated: 18th July 2018
 #
 # Purpose: Framework for creating custom widgets used for battleships
 # - Grid (10 x 10)
 # - Buttons
-# - Progress Bars (vertical / horizontal)
+# - Progress Bar (vertical)
+# – CustomLongText
+# – CoordUtils
+# – Popup
+# – ship
 #
 # # # # # # # # # # # # # # # # # # # #
 
@@ -17,9 +21,62 @@ import tkinter as tk
 import copy
 
 
-### Multi-function coordinate controller ###
+### Custom long label widget for multiline texts with formatting ###
+class CustomLongText(tk.Frame):
+    def __init__(self, parent, text, fg="#000", bg="#fff", width=500, height=500,
+                 fonts=None, side='top'):
+
+        super().__init__(parent)
+
+        self["bg"] = bg
+        self["width"] = width
+        self["height"] = height
+        self.grid_propagate(0)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.label_elements = []
+
+        for i in range(len(text)):
+            font = ("Tw Cen MT", 16) if not fonts else fonts["default"]
+
+            if text[i][:2] in [">b", ">i", ">l", ">s"]:
+
+                font_types = {">b": ("Tw Cen MT", 30, "bold"),
+                              ">i": ("Tw Cen MT", 16, "italic"),
+                              ">l": ("Tw Cen MT", 20),
+                              ">s": ("Tw Cen MT", 14)} if not fonts else fonts
+
+                font = font_types.get(text[i][:2], ("Tw Cen MT", 16))
+                line_formatted = text[i][2:]
+            else:
+                line_formatted = text[i]
+
+            sticky = 'n'
+            anchor = 'n'
+            justify = 'center'
+            padding = 0
+
+            if side == 'left':
+                sticky = 'w'
+                anchor = 'w'
+                justify = side
+                padding = (5, 0)
+
+            if side == 'right':
+                sticky = 'e'
+                anchor = 'e'
+                justify = side
+                padding = (0, 5)
+
+            rules_text = tk.Label(self, text=line_formatted, font=font,
+                                  bg=bg, fg=fg, justify=justify, anchor=anchor)
+
+            self.label_elements.append(rules_text)
+
+            rules_text.grid(row=i, column=0, sticky=sticky, padx=padding)
 
 
+### Collection of useful functions to perform on coordinates in any form ###
 class CoordUtils(object):
 
     # Coordinate given in (x, y) or alpha-num form, returned in (x, y) form
@@ -60,8 +117,6 @@ class CoordUtils(object):
         else:
             return None
 
-
-
     # Converts input coordinate into a different form.
     # A -> 1    1 -> A      A1 -> (1, 1)    (1, 1) –> A1
     @classmethod
@@ -90,14 +145,29 @@ class CoordUtils(object):
         else:
             return CHAR[letter - 1]
 
+    @classmethod
+    def get_coords_along_side(cls, coord, direction, length):
+        coords = [CoordUtils.convert_type(coord)]
+        for i in range(length - 1):
+            side_coord = CoordUtils.get_side_coord(coords[-1], direction)
+
+            if side_coord:
+                coords.append(CoordUtils.convert_type(side_coord))
+            else:
+                break
+        else:
+            return coords
+
+        return None
+
+
 ### Creates a rounded rectangle, with corner dimensions format ###
-#
-# – canvas defines parent body
-# – x1, y1 (first corner), x2, y2 (second corner), r defines corner radius
-# – colour is for the shape's colour
-# – tag is for any special tags
-# – bottom_hidden=True makes no rounding on bottom border
-#
+#   - canvas defines parent body
+#   -  x1, y1 (first corner), x2, y2 (second corner), r defines corner radius
+#   - colour is for the shape's colour
+#   - tag is for any special tags
+#   - bottom_hidden=True makes no rounding on bottom border
+#####
 def rounded_rect(canvas, x1, y1, x2, y2, r, colour, tag=None, bottom_hidden=False):
 
     # All the elements of
@@ -143,22 +213,23 @@ def rounded_rect(canvas, x1, y1, x2, y2, r, colour, tag=None, bottom_hidden=Fals
 
 
 ### Class of all the colours used with colour themes ###
-#
-# – default colour scheme can be accessed theme = Colour("default"), theme.GRAY... etc
-#
+#   - default colour scheme can be accessed theme = Colour("default"), theme.GRAY... etc
+#####
 class Colours(object):
     def __init__(self, theme):
 
         if theme == "default":
             self.WHITE = "#FFFFFF"
+            self.BLACK = "#303030"
 
-            self.GRAY_BRIGHT = "#eee"
+            self.GRAY_BRIGHT = "#EEE"
             self.GRAY_LIGHT = "#D0D0D0"
             self.GRAY = "#9E9E9E"
             self.GRAY_DARK = "#707070"
             self.GRAY_BLACK = "#505050"
 
             self.RED = "#FF4F4F"
+            self.RED_DIM = "#DF2F2F"
             self.RED_DARK = "#A42F2F"
 
             self.GOLD = "orange"
@@ -182,8 +253,8 @@ class Colours(object):
 
             self.BLUE = "#20B8CC"
 
-            self.GRADIENT = [self.RED, self.ORANGE,
-                             self.YELLOW, self.GREEN]
+            self.GRADIENT = [self.GREEN, self.GOLD,
+                             self.RED, "purple"]
 
 
 ### A progress bar ###
@@ -246,7 +317,7 @@ class ProgressBar(tk.Canvas):
 
 ### A popup that disappears in time ###
 class Popup(tk.Canvas):
-    def __init__(self, parent, text, bg, fg, fill=False, subtext=None):
+    def __init__(self, parent, text, bg, fg, fill=False, subtext=None, stay=False):
         theme = Colours("default")
         super().__init__(parent)
 
@@ -256,22 +327,30 @@ class Popup(tk.Canvas):
 
         self["height"] = parent.winfo_height() if fill else 100
         self["bg"] = bg
+        self["highlightthickness"] = 0
 
         main_font = ("Tw Cen MT", 28, "bold") if subtext else ("Tw Cen MT", 24)
 
-        self.create_text(int(self["width"]) / 2, int(self["height"]) / 2 - (12 if subtext else 0),
-                         text=text, fill=fg, font=main_font, anchor='center')
+        self.main = self.create_text(int(self["width"]) / 2, int(self["height"]) / 2 - (12 if subtext else 0),
+                                     text=text, fill=fg, font=main_font, anchor='center')
 
-        self.create_text(int(self["width"]) / 2, int(self["height"]) / 2 + 12,
-                         text=subtext if subtext else "", fill=fg, font=("Tw Cen MT", 16), anchor='center')
+        self.sub = self.create_text(int(self["width"]) / 2, int(self["height"]) / 2 + 12,
+                                    text=subtext if subtext else "", fill=fg, font=("Tw Cen MT", 16), anchor='center')
 
+        delay = 2000
 
-        parent.after(5000 if fill else 2000, self.destroy)
+        if fill: delay = 5000
+        if stay: delay = 10000
+
+        parent.after(delay, self.destroy)
 
 
 ### A ship to be placed on a canvas ###
 class Ship(object):
-    def get_name(ship_length):
+
+    # Utility function that gets the name of the ship based on the length
+    @classmethod
+    def get_name(cls, ship_length):
          return {2: 'Destroyer',
                  3: 'Cruiser',
                  4: 'Battleship',
@@ -311,9 +390,11 @@ class Ship(object):
             self.parent.tag_bind(canvas_obj, "<Enter>", lambda event: self.hover(event))
             self.parent.tag_bind(canvas_obj, "<Leave>", lambda event: self.unhover(event))
 
+    # Custom function passed to be called when ship is called. Functional purpose.
     def bind_to_click(self, function):
         self.binded_func = function
 
+    # Function called when ship is clicked. Aesthetic purposes
     def click(self, event):
         if self.selected == True:
             return
@@ -325,6 +406,7 @@ class Ship(object):
         self.selected = True
         self.binded_func(self)
 
+    # Function to call when mouse enters ship
     def hover(self, event):
         if self.selected == True:
             return
@@ -335,6 +417,7 @@ class Ship(object):
             self.parent.itemconfigure(canvas_obj, fill=self.theme.GRAY_LIGHT)
             self.parent.itemconfigure(canvas_obj, outline=self.theme.GRAY_LIGHT)
 
+    # Function called when mouse leaves ship
     def unhover(self, event):
         if self.selected == True:
             return
@@ -378,6 +461,9 @@ class CustomGrid(tk.Canvas):
         self.linked_percentage = None
         if self.linked_percentage: self.linked_percentage["text"] = "0.00%"
 
+        self.linked_coordinate = None
+        if self.linked_coordinate: self.linked_coordinate["text"] = "––"
+
         # Determines whether or not the board is used for setup or game
         self.is_game_board = is_game_board
 
@@ -411,7 +497,11 @@ class CustomGrid(tk.Canvas):
 
         self.update_canvas()
 
+        if len(self.hit_spaces) != 0:
+            for hit_coord in self.hit_spaces:
+                self.hit(None, self.coord_to_rect(CoordUtils.convert_type(hit_coord)), setup=True)
 
+    # Refreshes all the elements on the canvas, resets out all the board items etc.
     def update_canvas(self, show_hidden_ships=False):
 
         # Deletes existing squares
@@ -497,6 +587,7 @@ class CustomGrid(tk.Canvas):
     def colour_square(self, coord, fill):
         self.itemconfigure(self.coord_to_rect(coord)[0], fill=fill)
 
+
     ## FOLLOWING 4 DEFINITIONS ARE EVENT HANDLERS FOR SETUP ##
 
     # Places a ship based on the selection length
@@ -581,11 +672,49 @@ class CustomGrid(tk.Canvas):
             if self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT:
                 self.colour_square(rect[1], self.foreground)
 
+    ## FOLLOWING 3 FUNCITONS ARE EVENT HANDLERS FOR GAMEPLAY ##
+
     # Event handler when square is clicked
-    def hit(self, event, rect, override=False):
-        if self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT or override:
+    def hit(self, event, rect, override=False, setup=False):
+        if setup:
+            for ship in self.ships:
+                if CoordUtils.convert_type(rect[1]) in ship:
+
+                    remaining_ship = self.remaining_ships[ship.index(CoordUtils.convert_type(rect[1]))]
+
+                    print(len(remaining_ship))
+
+                    if len(remaining_ship) == 0:
+                        self.colour_square(rect[1], fill=self.theme.RED)
+                    else:
+                        self.colour_square(rect[1], fill=self.theme.ORANGE)
+                    break
+            else:
+                self.colour_square(rect[1], fill=self.theme.BLUE)
+
+            return
+
+        if self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT or self.itemcget(rect[0], "fill") == self.theme.GREEN or override:
+            if self.game.game_over:
+                return
 
             game_control = self.game.game_control(CoordUtils.convert_type(rect[1]), self.owner)
+
+            if not game_control:
+                return
+
+            if self.linked_coordinate:
+                self.linked_coordinate["text"] = CoordUtils.convert_type(rect[1])
+
+                colour = self.theme.WHITE
+
+                if len(game_control) == 3:
+                    colour = self.theme.ORANGE
+
+                    if game_control[1]:
+                        colour = self.theme.RED
+
+                self.linked_coordinate["fg"] = colour
 
             # Nothing was hit
             if len(game_control) == 1:
@@ -626,17 +755,19 @@ class CustomGrid(tk.Canvas):
                     if round(new_percent) == 100:
                         self.linked_percentage["text"] = roundings[2]
 
-    # When a square is hovered – frontend
+                self.game.check_win()
+
+    # When a square is hovered
     def hover(self, event, rect):
         if self.disabled == False and self.itemcget(rect[0], "fill") == self.theme.GRAY_LIGHT:
             self.colour_square(rect[1], self.theme.GRAY_BRIGHT)
 
-    # When a square is unhovered – frontend
+    # When a square is unhovered
     def unhover(self, event, rect):
         if self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT:
             self.colour_square(rect[1], self.theme.GRAY_LIGHT)
 
-    # Show all hidden ships on board
+    # Show all hidden ships on board, 'mainly' for debugging purposes
     def show_hidden_ships(self):
         self.update_canvas(show_hidden_ships=True)
 
@@ -644,7 +775,7 @@ class CustomGrid(tk.Canvas):
 ### Blueprint for rounded buttons with built in event handlers ###
 class CustomButton(tk.Frame):
     def __init__(self, parent, text, fg=None, colour=None, active=None,
-                       width=200, height=60, bg_canvas='white', font=("Tw Cen MT", 20), align="center"):
+                 width=200, height=60, bg_canvas='white', font=("Tw Cen MT", 20), align="center"):
         super().__init__(parent)
 
         if None in [fg, colour, active]:
@@ -675,7 +806,7 @@ class CustomButton(tk.Frame):
         self.hori_button.pack_propagate(0)
 
         if align == "center":
-            self.label.place(x=(self.width-4)/2, y=(self.height-20)/2, anchor="center")
+            self.label.place(x=self.width / 2 - 5, y=self.height/2 - 11, anchor="center")
         elif align == "left":
             self.label.place(x=20, y=(self.height-20)/2, anchor="w")
 
@@ -692,6 +823,7 @@ class CustomButton(tk.Frame):
         self.canvas.create_window(12, 52, window=self.vert_button[1], anchor="nw")
         self.canvas.create_window(5, 12, window=self.hori_button, anchor="nw")
 
+    # Function called when the custom button is hovered over
     def hover(self, event):
         for btn in self.vert_button + [self.hori_button, self.label]:
             btn["bg"] = self.active_colour
@@ -700,6 +832,7 @@ class CustomButton(tk.Frame):
             self.canvas.itemconfig(el, fill=self.active_colour)
             self.canvas.itemconfig(el, outline=self.active_colour)
 
+    # Function called when unhovering
     def unhover(self, event):
         for btn in self.vert_button + [self.hori_button, self.label]:
             btn["bg"] = self.colour
@@ -708,9 +841,11 @@ class CustomButton(tk.Frame):
             self.canvas.itemconfig(el, fill=self.colour)
             self.canvas.itemconfig(el, outline=self.colour)
 
+    # Custom function passed when button is clicked. Functional purpose
     def bind_to_click(self, func):
         self.click_func = func
 
+    # Function called when button is clicked.
     def click(self, event):
         if self.click_func:
             self.click_func()
