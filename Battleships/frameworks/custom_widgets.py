@@ -3,7 +3,7 @@
 # Created 11th June 2018, Raymond Feng
 #
 # Current Version: 4.15
-# Updated: 18th July 2018
+# Updated: 22nd July 2018
 #
 # Purpose: Framework for creating custom widgets used for battleships
 # - Grid (10 x 10)
@@ -497,10 +497,6 @@ class CustomGrid(tk.Canvas):
 
         self.update_canvas()
 
-        if len(self.hit_spaces) != 0:
-            for hit_coord in self.hit_spaces:
-                self.hit(None, self.coord_to_rect(CoordUtils.convert_type(hit_coord)), setup=True)
-
     # Refreshes all the elements on the canvas, resets out all the board items etc.
     def update_canvas(self, show_hidden_ships=False):
 
@@ -576,6 +572,15 @@ class CustomGrid(tk.Canvas):
                         self.tag_bind(element, "<Button-2>", lambda event, rect=rect: self.rotate_selection(event, rect))
                         self.tag_bind(element, "<Enter>", lambda event, rect=rect: self.hover_selection(event, rect))
                         self.tag_bind(element, "<Leave>", lambda event, rect=rect: self.unhover_selection(event, rect))
+
+        if self.is_game_board and len(self.hit_spaces) != 0:
+
+            for hit_coord in self.hit_spaces:
+                for ship in self.remaining_ships:
+                    if hit_coord in ship:
+                        ship.remove(hit_coord)
+
+                self.hit(None, self.coord_to_rect(CoordUtils.convert_type(hit_coord)), setup=True)
 
     # Find the "rect" object (Canvas elements, (x, y)) based on a given (x, y) coord
     def coord_to_rect(self, coord):
@@ -677,24 +682,25 @@ class CustomGrid(tk.Canvas):
     # Event handler when square is clicked
     def hit(self, event, rect, override=False, setup=False):
         if setup:
+            # For all ships on the board
             for ship in self.ships:
+
+                # Check if the hit coordinate was occupied
                 if CoordUtils.convert_type(rect[1]) in ship:
-
-                    remaining_ship = self.remaining_ships[ship.index(CoordUtils.convert_type(rect[1]))]
-
-                    print(len(remaining_ship))
+                    remaining_ship = self.remaining_ships[self.ships.index(ship)]
 
                     if len(remaining_ship) == 0:
-                        self.colour_square(rect[1], fill=self.theme.RED)
+                        for coord in ship:
+                            self.colour_square(CoordUtils.convert_type(coord), fill=self.theme.RED)
                     else:
-                        self.colour_square(rect[1], fill=self.theme.ORANGE)
+                        self.colour_square(rect[1], fill=self.theme.GOLD)
                     break
             else:
                 self.colour_square(rect[1], fill=self.theme.BLUE)
 
-            return
+            self.game.check_win()
 
-        if self.itemcget(rect[0], "fill") == self.theme.GRAY_BRIGHT or self.itemcget(rect[0], "fill") == self.theme.GREEN or override:
+        if not setup and (self.itemcget(rect[0], "fill") in [self.theme.GRAY_BRIGHT, self.theme.GREEN] or override):
             if self.game.game_over:
                 return
 
@@ -709,7 +715,7 @@ class CustomGrid(tk.Canvas):
                 colour = self.theme.WHITE
 
                 if len(game_control) == 3:
-                    colour = self.theme.ORANGE
+                    colour = self.theme.GOLD
 
                     if game_control[1]:
                         colour = self.theme.RED
@@ -734,28 +740,25 @@ class CustomGrid(tk.Canvas):
                 else:
                     self.colour_square(rect[1], self.theme.GOLD)
 
-                # Total number of ship squares
-                total_spaces = sum([len(ship) for ship in self.ships])
+            self.game.check_win()
 
-                # Number of ship squares remaining (unhit)
-                remaining_spaces = sum([len(ship) for ship in self.remaining_ships])
+        # Total number of ship squares
+        total_spaces = sum([len(ship) for ship in self.ships])
 
-                # Increments the progress bar, note: percentage is the percentage of ships sunk
-                if self.linked_progress_bar:
-                    new_percent = round((1 - remaining_spaces/total_spaces) * 100)
-                    self.linked_progress_bar.set_percentage(new_percent)
+        # Number of ship squares remaining (unhit)
+        remaining_spaces = sum([len(ship) for ship in self.remaining_ships])
 
-                if self.linked_percentage:
-                    new_percent = (1 - remaining_spaces/total_spaces) * 100
+        # Increments the progress bar, note: percentage is the percentage of ships sunk
+        if self.linked_progress_bar:
+            new_percent = round((1 - remaining_spaces/total_spaces) * 100)
+            self.linked_progress_bar.set_percentage(new_percent)
 
-                    roundings = ["{:.2f}%".format(round(new_percent)), "{:.1f}%".format(round(new_percent)), "100%"]
+        if self.linked_percentage:
+            new_percent = (1 - remaining_spaces/total_spaces) * 100
 
-                    self.linked_percentage["text"] = roundings[0] if new_percent < 10 else roundings[1]
-
-                    if round(new_percent) == 100:
-                        self.linked_percentage["text"] = roundings[2]
-
-                self.game.check_win()
+            if new_percent < 10: self.linked_percentage["text"] = "{:.2f}%".format(round(new_percent))
+            elif new_percent < 100: self.linked_percentage["text"] = "{:.1f}%".format(round(new_percent))
+            else: self.linked_percentage["text"] = "100%"
 
     # When a square is hovered
     def hover(self, event, rect):

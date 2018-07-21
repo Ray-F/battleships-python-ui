@@ -2,13 +2,13 @@
 #
 # Created 11th June 2018, Raymond Feng
 #
-# Updated: 18th July 2018
+# Updated: 22nd July 2018
 #
 # Purpose: Main battleships game class
 #
 # # # # # # # # # # # # # # # # # # # #
 
-version = 2.54
+version = 3.00
 
 
 import tkinter as tk
@@ -64,7 +64,7 @@ class SplashScreen(tk.Frame):
         rounded_rect(info_frame, 0, 0, int(info_frame["width"]), int(info_frame["height"]), 50, colour=theme.GRAY_LIGHT)
 
 
-        info_frame_text = ['>bAlpha Release V{}'.format(version),
+        info_frame_text = ['>bBeta Release V{:.2f}'.format(version),
                            '>lLEADERBOARDS',
                            '']
 
@@ -433,7 +433,6 @@ class GameWindow(tk.Frame):
                                     is_game_board=True, game=self.game, owner='computer')
         self.game.computer_board = self.main_grid
         self.main_grid.pack()
-        self.main_grid.show_hidden_ships()
 
         bottom_filler = tk.Frame(main_container, width=int(self.main_grid["width"]), height=130,
                                  highlightthickness=0, bg=theme.GRAY_DARK)
@@ -1002,7 +1001,7 @@ if __name__ == "__main__":
 
     root.wm_geometry("850x600")
     root.wm_resizable(0, 0)
-    root.wm_title("Battleships V{} alpha".format(version))
+    root.wm_title("Battleships V{:.2f} beta".format(version))
 
     # For setting the application for gameplay, easy to debug without having
     # to setup ships every single time
