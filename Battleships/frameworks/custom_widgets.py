@@ -21,61 +21,6 @@ import tkinter as tk
 import copy
 
 
-### Custom long label widget for multiline texts with formatting ###
-class CustomLongText(tk.Frame):
-    def __init__(self, parent, text, fg="#000", bg="#fff", width=500, height=500,
-                 fonts=None, side='top'):
-
-        super().__init__(parent)
-
-        self["bg"] = bg
-        self["width"] = width
-        self["height"] = height
-        self.grid_propagate(0)
-        self.grid_columnconfigure(0, weight=1)
-
-        self.label_elements = []
-
-        for i in range(len(text)):
-            font = ("Tw Cen MT", 16) if not fonts else fonts["default"]
-
-            if text[i][:2] in [">b", ">i", ">l", ">s"]:
-
-                font_types = {">b": ("Tw Cen MT", 30, "bold"),
-                              ">i": ("Tw Cen MT", 16, "italic"),
-                              ">l": ("Tw Cen MT", 20),
-                              ">s": ("Tw Cen MT", 14)} if not fonts else fonts
-
-                font = font_types.get(text[i][:2], ("Tw Cen MT", 16))
-                line_formatted = text[i][2:]
-            else:
-                line_formatted = text[i]
-
-            sticky = 'n'
-            anchor = 'n'
-            justify = 'center'
-            padding = 0
-
-            if side == 'left':
-                sticky = 'w'
-                anchor = 'w'
-                justify = side
-                padding = (5, 0)
-
-            if side == 'right':
-                sticky = 'e'
-                anchor = 'e'
-                justify = side
-                padding = (0, 5)
-
-            rules_text = tk.Label(self, text=line_formatted, font=font,
-                                  bg=bg, fg=fg, justify=justify, anchor=anchor)
-
-            self.label_elements.append(rules_text)
-
-            rules_text.grid(row=i, column=0, sticky=sticky, padx=padding)
-
-
 ### Collection of useful functions to perform on coordinates in any form ###
 class CoordUtils(object):
 
@@ -257,6 +202,64 @@ class Colours(object):
                              self.RED, "purple"]
 
 
+### Custom long label widget for multiline texts with formatting ###
+class CustomLongText(tk.Frame):
+    def __init__(self, parent, text, fg="#000", bg="#fff", width=500, height=500,
+                 fonts=None, side='top'):
+
+        super().__init__(parent)
+
+        self["bg"] = bg
+        self["width"] = width
+        self["height"] = height
+        self.grid_propagate(0)
+        self.grid_columnconfigure(0, weight=1)
+
+        self.label_elements = []
+
+        for i in range(len(text)):
+            font = ("Tw Cen MT", 16) if not fonts else fonts["default"]
+
+            if text[i][:2] in [">b", ">i", ">l", ">s"]:
+
+                font_types = {">b": ("Tw Cen MT", 30, "bold"),
+                              ">i": ("Tw Cen MT", 16, "italic"),
+                              ">l": ("Tw Cen MT", 20),
+                              ">s": ("Tw Cen MT", 14)} if not fonts else fonts
+
+                font = font_types.get(text[i][:2], ("Tw Cen MT", 16))
+                line_formatted = text[i][2:]
+            else:
+                line_formatted = text[i]
+
+            sticky = 'n'
+            anchor = 'n'
+            justify = 'center'
+            padding = 0
+
+            if side == 'left' or text[i][:2] == ">s":
+                sticky = 'w'
+                anchor = 'w'
+                justify = 'left'
+                if text[i][:2] == ">s":
+                    padding = 0
+                else:
+                    padding = (5, 0)
+
+            if side == 'right':
+                sticky = 'e'
+                anchor = 'e'
+                justify = 'right'
+                padding = (0, 5)
+
+            rules_text = tk.Label(self, text=line_formatted, font=font,
+                                  bg=bg, fg=fg, justify=justify, anchor=anchor)
+
+            self.label_elements.append(rules_text)
+
+            rules_text.grid(row=i, column=0, sticky=sticky, padx=padding)
+
+
 ### A progress bar ###
 class ProgressBar(tk.Canvas):
     def __init__(self, parent, direction="up", colours=("#FF4F4F", "#A42F2F"),
@@ -339,7 +342,9 @@ class Popup(tk.Canvas):
 
         delay = 2000
 
-        if fill: delay = 5000
+        if fill:
+            delay = 5000
+            self.bind("<Button-1>", lambda event: self.destroy())
         if stay: delay = 10000
 
         parent.after(delay, self.destroy)

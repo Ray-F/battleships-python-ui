@@ -9,7 +9,7 @@
 # # # # # # # # # # # # # # # # # # # #
 
 # Current version of the program.
-version = 3.10
+version = 3.21
 
 
 import tkinter as tk
@@ -24,7 +24,7 @@ from frameworks.custom_widgets import *
 ### Function for switching between different screens ###
 #   – Screens can be of splash, setup, game (with 'Game' object arg)
 #   – Note: All screens (splash, setup etc.) are of type tk.Frame
-###
+#####
 def switch_screen(screen, args=None):
     global current_screen
 
@@ -45,7 +45,7 @@ def switch_screen(screen, args=None):
     root.after(50, white.destroy)
 
 
-### Splash screen to load a saved game, start a new game or view leaderboard ###
+### Splash screen to load a saved game, start a new game or view scoreboard ###
 class SplashScreen(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
@@ -69,7 +69,7 @@ class SplashScreen(tk.Frame):
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.main_frame.grid_columnconfigure(1, weight=0)
 
-        # Lefthand side rounded frame for displaying information and leaderboards #
+        # Lefthand side rounded frame for displaying information and scoreboards #
         info_canvas = tk.Canvas(self.main_frame, width=480, height=320, highlightthickness=0)
         info_canvas.grid(column=0, row=0, sticky='nw')
 
@@ -78,31 +78,41 @@ class SplashScreen(tk.Frame):
 
         # Outer information text, static
         info_text = ['>bBeta Release V{:.2f}'.format(version),
-                     '>lLEADERBOARDS',
+                     '>lSCOREBOARD',
                      '', '', '', '', '',
                      '\n',
                      '>sDesigned by Raymond Feng, 2018.',
                      '>sGo to  http://www.spprax.com  to find out more']
 
-        leaderboard_text = ['']
+        scoreboard_text = ['']
 
-        # Appends all the scores for different difficulties into leaderboard_text
+        # Appends all the scores for different difficulties into scoreboard_text
         for mode in ('easy', 'normal', 'hard', 'master'):
-            leaderboard_text.append('{} Mode:\t{} wins – {} losses'.format(mode.upper(),
+            scoreboard_text.append('{} Mode:\t{} wins – {} losses'.format(mode.upper(),
                                                                            manager.stats[mode][0],
                                                                            manager.stats[mode][1]))
 
         # Creates a frame with labels for every element in info_text
-        info_labels = CustomLongText(info_canvas, text=info_text, height=270, width=300,
+        info_labels = CustomLongText(info_canvas, text=info_text, height=270, width=400,
                                            fg=theme.GRAY_BLACK, bg=theme.GRAY_LIGHT)
         info_canvas.create_window(int(info_canvas["width"]) / 2, int(info_canvas['height']) / 2,
                                  window=info_labels, anchor='center', tag='window')
 
-        # Creates a frame with labels for every element in leaderboard_text
-        leaderboard_labels = CustomLongText(info_canvas, text=leaderboard_text, height=140, width=400,
+        # Creates a frame with labels for every element in scoreboard_text
+        scoreboard_labels = CustomLongText(info_canvas, text=scoreboard_text, height=140, width=400,
                                             fg=theme.GRAY_BLACK, bg=theme.WHITE)
         info_canvas.create_window(int(info_canvas['width']) / 2, int(info_canvas['height']) / 2 + 10,
-                                 window=leaderboard_labels, anchor='center', tag='window')
+                                 window=scoreboard_labels, anchor='center', tag='window')
+
+        def reset():
+            manager.reset_scores()
+            switch_screen('splash')
+
+        reset_score_button = CustomButton(info_canvas, text="Reset Scores", width=90, height=40, font=("Tw Cen MT", 12),
+                                          colour=theme.GRAY, fg=theme.WHITE, active=theme.GRAY_DARK, bg_canvas=theme.GRAY_LIGHT)
+
+        reset_score_button.bind_to_click(reset)
+        info_canvas.create_window(440, 295, window=reset_score_button, anchor='se', tag='window')
 
         # Right hand side frame, acts as a buttons container #
         buttons_container = tk.Frame(self.main_frame, width=256, height=int(self.main_frame["height"]))
@@ -355,13 +365,13 @@ class SetupWindow(tk.Frame):
         # 'SETUP GUIDE' label
         help_label = tk.Label(help_container, text="SETUP GUIDE", font=("Tw Cen MT", 20, "bold"),
                               bg=theme.GRAY_BLACK, fg=theme.WHITE)
-        help_label.pack(pady=5)
+        help_label.pack(pady=(8, 2))
 
         # Places all the help text
         help_text = ['1) Click on a white ship to select,      '
                      '\nthen hover over grid to set ship.',
                      '\n2) Rotate a ship by right-clicking\n on the grid.',
-                     '3) Click mode to toggle difficutly.']
+                     '\n3) Click mode to toggle difficutly.']
         help_desc = CustomLongText(help_container, text=help_text, width=220, height=160,
                                    bg=theme.GRAY_DARK, fg=theme.WHITE, side='left')
         help_desc["pady"] = 10
@@ -953,9 +963,10 @@ class Game(object):
 
         return result
 
+
 ### How the computer decides to play, best to its ability ###
 # Note: Computer gameplay difficulty is determined through the 'game' class
-###
+#####
 class ComputerLogic(object):
     def __init__(self):
 
@@ -1176,6 +1187,7 @@ class Manager(object):
                       'normal': [0, 0],
                       'hard': [0, 0],
                       'master': [0, 0]}
+        self.export_to_file()
 
     ## Replaces old games if all saves are full ##
     def save_game(self, game_data_summary):
@@ -1186,7 +1198,6 @@ class Manager(object):
 
         # Add new save
         self.saved_games.append(game_data_summary)
-
 
 
 if __name__ == "__main__":
@@ -1201,6 +1212,8 @@ if __name__ == "__main__":
     root.wm_geometry("850x600")
     root.wm_resizable(0, 0)
     root.wm_title("Battleships V{:.2f} beta".format(version))
+
+    root["bg"] = 'white'
 
     # The 'frame' that's displayed on the application window
     current_screen = None
