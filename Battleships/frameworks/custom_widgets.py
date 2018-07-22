@@ -252,25 +252,24 @@ class CustomLongText(tk.Frame):
                 justify = 'right'
                 padding = (0, 5)
 
-            rules_text = tk.Label(self, text=line_formatted, font=font,
+            line_label = tk.Label(self, text=line_formatted, font=font,
                                   bg=bg, fg=fg, justify=justify, anchor=anchor)
 
-            self.label_elements.append(rules_text)
+            self.label_elements.append(line_label)
 
-            rules_text.grid(row=i, column=0, sticky=sticky, padx=padding)
+            line_label.grid(row=i, column=0, sticky=sticky, padx=padding)
 
 
 ### A progress bar ###
 class ProgressBar(tk.Canvas):
     def __init__(self, parent, direction="up", colours=("#FF4F4F", "#A42F2F"),
-                 bg_canvas="white", multiplier=2, gradient=False):
+                 bg_canvas="white", multiplier=2):
         super().__init__(parent)
 
         self.theme = Colours("default")
 
         self.direction = direction
         self.multiplier = multiplier
-        self.gradient = gradient
 
         self.background = colours[0]
         self.foreground = colours[1]
@@ -278,8 +277,6 @@ class ProgressBar(tk.Canvas):
         self.percentage = 0
 
         self.bar_height = round(self.multiplier * 205)
-
-        self.previous = None
 
         self["highlightthickness"] = 0
         self["bg"] = bg_canvas
@@ -289,28 +286,22 @@ class ProgressBar(tk.Canvas):
         self.update_canvas()
 
     def update_canvas(self):
-
-        if self.previous:
-            self.delete('all')
-
-        colour = self.theme.GRADIENT[round(self.percentage/25)] if self.gradient else self.background
+        self.delete('all')
 
         if self.direction == "down":
             self.bar = rounded_rect(self, 0, self.bar_height - (self.bar_height/100 * (100 - self.percentage)),
                                     int(self["width"]) - 2,
                                     int(self["height"]), 40,
-                                    colour)
+                                    self.background)
         else:
             self.bar = rounded_rect(self, 0, self.bar_height - (self.bar_height/100 * self.percentage),
                                     int(self["width"]) - 2,
                                     int(self["height"]), 40,
-                                    colour)
+                                    self.background)
 
         self.create_text(int(self["width"])/2, int(self["height"]) - 10,
                          text="{}%".format((self.percentage if self.direction == "up" else (100 - self.percentage))),
                          fill=self.foreground, font=("TW Cen MT", 20, "bold"), anchor="s")
-
-        self.previous = True
 
     def set_percentage(self, new_percentage):
         self.percentage = new_percentage
