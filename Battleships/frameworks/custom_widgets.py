@@ -566,6 +566,7 @@ class CustomGrid(tk.Canvas):
                     for element in element_arr:
                         self.tag_bind(element, "<Button-1>", lambda event, rect=rect: self.place_ship(event, rect))
                         self.tag_bind(element, "<Button-2>", lambda event, rect=rect: self.rotate_selection(event, rect))
+                        self.tag_bind(element, "<Button-3>", lambda event, rect=rect: self.rotate_selection(event, rect))
                         self.tag_bind(element, "<Enter>", lambda event, rect=rect: self.hover_selection(event, rect))
                         self.tag_bind(element, "<Leave>", lambda event, rect=rect: self.unhover_selection(event, rect))
 

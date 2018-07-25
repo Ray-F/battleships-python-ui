@@ -9,7 +9,7 @@
 # # # # # # # # # # # # # # # # # # # #
 
 # Current version of the program.
-version = 3.21
+version = 2.21
 
 
 import tkinter as tk
@@ -1190,14 +1190,14 @@ class Manager(object):
         self.export_to_file()
 
     ## Replaces old games if all saves are full ##
-    def save_game(self, game_data_summary):
+    def save_game(self, game_data):
 
         # If current length of saves is greater than 2 (3 or more), delete oldest
         if len(self.saved_games) > 2:
             del self.saved_games[0]
 
         # Add new save
-        self.saved_games.append(game_data_summary)
+        self.saved_games.append(game_data)
 
 
 if __name__ == "__main__":
