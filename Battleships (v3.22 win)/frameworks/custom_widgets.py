@@ -26,6 +26,57 @@ import platform
 windows = True if (platform.system() == "Windows") else False
 
 
+### Creates a rounded rectangle, with corner dimensions format ###
+#   - canvas defines parent body
+#   -  x1, y1 (first corner), x2, y2 (second corner), r defines corner radius
+#   - colour is for the shape's colour
+#   - tag is for any special tags
+#   - bottom_hidden=True makes no rounding on bottom border
+#####
+def rounded_rect(canvas, x1, y1, x2, y2, r, colour, tag=None, bottom_hidden=False):
+
+    # All the elements of
+    elements = []
+
+    if str(r).isdigit():
+        rad = (r, r, r, r)
+    elif len(r) == 2:
+        rad = (r[0], r[0], r[1], r[1])
+    elif len(r) == 4:
+        rad = (r[0], r[1], r[2], r[3])
+
+    # Top Left
+    elements.append(canvas.create_arc(x1, y1, x1+r, y1+r,
+                                      start=90, extent=90, style=tk.PIESLICE,
+                                      fill=colour, outline=colour))
+
+    # Top Right
+    elements.append(canvas.create_arc(x2-r, y1, x2, y1+r,
+                                      start=0, extent=90, style=tk.PIESLICE,
+                                      fill=colour, outline=colour))
+
+    # Bottom Left
+    elements.append(canvas.create_arc(x1, y2-r, x1+r, y2,
+                                      start=180, extent=90, style=tk.PIESLICE,
+                                      fill=colour, outline=colour))
+
+    # Bottom Right
+    elements.append(canvas.create_arc(x2-r, y2-r, x2, y2,
+                                      start=270, extent=90, style=tk.PIESLICE,
+                                      fill=colour, outline=colour))
+
+    elements.append(canvas.create_rectangle(x1+r/2, y1, x2-r/2+1, y2+1, fill=colour, width=0))
+    elements.append(canvas.create_rectangle(x1, y1+r/2, x2+1, y2-r/2+1, fill=colour, width=0))
+
+    if bottom_hidden:
+        bottom_edge = canvas.create_rectangle(x1, y2 - r/2,
+                                              x2, y2 + r/2,
+                                              fill=colour, width=0)
+        elements.append(bottom_edge)
+
+    return elements
+
+
 ### Collection of useful functions to perform on coordinates in any form ###
 class CoordUtils(object):
 
@@ -109,57 +160,6 @@ class CoordUtils(object):
             return coords
 
         return None
-
-
-### Creates a rounded rectangle, with corner dimensions format ###
-#   - canvas defines parent body
-#   -  x1, y1 (first corner), x2, y2 (second corner), r defines corner radius
-#   - colour is for the shape's colour
-#   - tag is for any special tags
-#   - bottom_hidden=True makes no rounding on bottom border
-#####
-def rounded_rect(canvas, x1, y1, x2, y2, r, colour, tag=None, bottom_hidden=False):
-
-    # All the elements of
-    elements = []
-
-    if str(r).isdigit():
-        rad = (r, r, r, r)
-    elif len(r) == 2:
-        rad = (r[0], r[0], r[1], r[1])
-    elif len(r) == 4:
-        rad = (r[0], r[1], r[2], r[3])
-
-    # Top Left
-    elements.append(canvas.create_arc(x1, y1, x1+r, y1+r,
-                                      start=90, extent=90, style=tk.PIESLICE,
-                                      fill=colour, outline=colour))
-
-    # Top Right
-    elements.append(canvas.create_arc(x2-r, y1, x2, y1+r,
-                                      start=0, extent=90, style=tk.PIESLICE,
-                                      fill=colour, outline=colour))
-
-    # Bottom Left
-    elements.append(canvas.create_arc(x1, y2-r, x1+r, y2,
-                                      start=180, extent=90, style=tk.PIESLICE,
-                                      fill=colour, outline=colour))
-
-    # Bottom Right
-    elements.append(canvas.create_arc(x2-r, y2-r, x2, y2,
-                                      start=270, extent=90, style=tk.PIESLICE,
-                                      fill=colour, outline=colour))
-
-    elements.append(canvas.create_rectangle(x1+r/2, y1, x2-r/2+1, y2+1, fill=colour, width=0))
-    elements.append(canvas.create_rectangle(x1, y1+r/2, x2+1, y2-r/2+1, fill=colour, width=0))
-
-    if bottom_hidden:
-        bottom_edge = canvas.create_rectangle(x1, y2 - r/2,
-                                              x2, y2 + r/2,
-                                              fill=colour, width=0)
-        elements.append(bottom_edge)
-
-    return elements
 
 
 ### Class of all the colours used with colour themes ###

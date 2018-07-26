@@ -9,7 +9,7 @@
 # # # # # # # # # # # # # # # # # # # #
 
 # Current version of the program.
-version = 2.22
+version = 3.22
 
 import tkinter as tk
 import random
@@ -53,13 +53,13 @@ def switch_screen(screen, args=None):
 ### Splash screen to load a saved game, start a new game or view scoreboard ###
 class SplashScreen(tk.Frame):
     def __init__(self, parent):
-        
+
         # Uses the colour theme defined at startup
         theme = Colours(manager.theme)
-        
+
         super().__init__(parent, bg=theme.WHITE)
 
-        
+
         # Horizontal bar (aesthetic)
         self.bar = tk.Frame(self, width=800, height=25, bg=theme.GRAY_DARK)
         self.bar.pack(side='top', pady=(60, 0))
@@ -87,7 +87,7 @@ class SplashScreen(tk.Frame):
         # Outer information text, static
         info_text = ['>bBeta Release V{:.2f}'.format(version),
                      '>lSCOREBOARD',
-                     '\n\n\n\n\n\n\n',
+                     '\n\n\n', '\n', '\n',
                      '>sDesigned by Raymond Feng, 2018.',
                      '>sGo to  http://www.spprax.com  to find out more']
 
@@ -512,7 +512,7 @@ class GameWindow(tk.Frame):
     def __init__(self, parent, game):
         theme = Colours(manager.theme)
         super().__init__(parent, bg=theme.WHITE)
-        
+
         self.game = game
 
         # Left container for the progress bar and text #
@@ -855,7 +855,11 @@ class Game(object):
                         counter += 1
 
                 # Plays the coordinate previously generated after 1 second (to simulate 'thinking')
-                def next(): self.player_board.hit(None, self.player_board.coord_to_rect(hit_coord), override=True)
+                def next():
+                    self.player_board.hit(None, self.player_board.coord_to_rect(hit_coord), override=True)
+                    print(CoordUtils.convert_type(hit_coord))
+                    self.computer_logic.grid.remove(CoordUtils.convert_type(hit_coord))
+
                 root.after(1000, next)
 
                 # Returns that the next move is on the player's board (i.e computer's turn)
@@ -883,11 +887,13 @@ class Game(object):
                     # Removes the hit square from remaining spaces
                     ship.remove(coord)
 
-                    # Generates a new hit coordinate based on previously hit coordinate
+                    # Generates a new hit coordinate based on previously hit coordinates
                     hit_coord = CoordUtils.convert_type(self.computer_logic.square_hit(coord, sunk=ship_sunk, ship=current_ship))
 
                     # Plays predefined coordinate after 1s (simulates 'thinking' time)
-                    def next(): self.player_board.hit(None, self.player_board.coord_to_rect(hit_coord), override=True)
+                    def next():
+                        self.player_board.hit(None, self.player_board.coord_to_rect(hit_coord), override=True)
+                        self.computer_logic.grid.remove(CoordUtils.convert_type(hit_coord))
                     root.after(1000, next)
 
                     return(board_name, ship_sunk, current_ship)
@@ -1002,7 +1008,6 @@ class ComputerLogic(object):
                 # Checks to see if there are any spaces around the coordinate,
                 # since there isn't a point in hitting into an enclosed area
                 if CoordUtils.convert_type(surrounding_coord) in self.grid:
-                    self.grid.remove(coord)
                     return coord
             else:
                 return self.make_move()
@@ -1043,7 +1048,6 @@ class ComputerLogic(object):
 
                             # If the target choosen is in the computer's grid
                             if target and target in self.grid:
-                                self.grid.remove(target)
                                 return target
 
                     # If only one side of the hit square is hit
@@ -1052,19 +1056,15 @@ class ComputerLogic(object):
 
                         # Checks which side the hit square is on, and hit on the opposite side
                         if index == 0 and converted_sides[1] in self.grid:
-                            self.grid.remove(converted_sides[1])
                             return converted_sides[1]
 
                         elif index == 1 and converted_sides[0] in self.grid:
-                            self.grid.remove(converted_sides[0])
                             return converted_sides[0]
 
                         elif index == 2 and converted_sides[3] in self.grid:
-                            self.grid.remove(converted_sides[3])
                             return converted_sides[3]
 
                         elif index == 3 and converted_sides[2] in self.grid:
-                            self.grid.remove(converted_sides[2])
                             return converted_sides[2]
 
                         else:
@@ -1086,9 +1086,8 @@ class ComputerLogic(object):
             # Hits the potential_target, else make a random choice
             if len(potential_targets) != 0:
                 target = random.choice(potential_targets)
-                self.grid.remove(target)
-
                 return target
+
             else:
                 self.cached_ship_coords = []
                 return self.make_move()
@@ -1145,12 +1144,11 @@ class ComputerLogic(object):
         return computer_ships
 
     ## Updates the computer's grid memory by removing previously hit spces ##
-    # Note: Coordinates to be in alpha-num form
+    # Note: Coordinates to be in alpha-num form, for setup purposes
     def set_hit_spaces(self, hit_spaces):
         for coord in hit_spaces:
             if coord in self.grid:
                 self.grid.remove(coord)
-
 
 ### Manager for reading / writing to files for saving ###
 class Manager(object):
