@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # # # # # # # # # # # # # # # # # # # #
 #
 # Created 11th June 2018, Raymond Feng
@@ -87,9 +88,9 @@ class SplashScreen(tk.Frame):
         # Outer information text, static
         info_text = ['>bBeta Release V{:.2f}'.format(version),
                      '>lSCOREBOARD',
-                     '\n\n\n', '\n', '\n',
+                     '\n\n\n', '\n\n\n',
                      '>sDesigned by Raymond Feng, 2018.',
-                     '>sGo to  http://www.spprax.com  to find out more']
+                     '>sGo to www.spprax.co.nz  to find out more']
 
         scoreboard_text = ['']
 
